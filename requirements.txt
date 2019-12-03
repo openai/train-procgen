@@ -1,5 +1,5 @@
 gym==0.15.4
-# procgen==0.9.1
+procgen==0.9.1
 mpi4py~=3.0
 tensorflow==1.15.0
 pytest # for baselines
