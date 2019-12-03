@@ -47,7 +47,7 @@ def main():
     if test_worker_interval > 0:
         is_test_worker = comm.Get_rank() % test_worker_interval == (test_worker_interval - 1)
 
-    mpi_rank_weight = 1 if is_test_worker else 0
+    mpi_rank_weight = 0 if is_test_worker else 1
     num_levels = 0 if is_test_worker else args.num_levels
 
     log_comm = comm.Split(1 if is_test_worker else 0, 0)
