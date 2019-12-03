@@ -4,7 +4,7 @@
 
 #### [[Blog Post]](https://openai.com/blog/procgen-benchmark/) [[Paper]](https://cdn.openai.com/procgen.pdf)
 
-This is code for training agents for some of the experiments in [Leveraging Procedural Generation to Benchmark Reinforcement Learning](https://cdn.openai.com/procgen.pdf) [(citation)](#citation).  For the code for the environments, see the [Procgen Benchmark](https://github.com/openai/procgen) repo.
+This is code for training agents for some of the experiments in [Leveraging Procedural Generation to Benchmark Reinforcement Learning](https://cdn.openai.com/procgen.pdf) [(citation)](#citation).  The code for the environments is in the [Procgen Benchmark](https://github.com/openai/procgen) repo.
 
 ## Install
 
