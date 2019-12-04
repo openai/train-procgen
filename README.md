@@ -8,12 +8,12 @@ This is code for training agents for some of the experiments in [Leveraging Proc
 
 ## Install
 
-This training script works on Mac OS X 10.14 and Ubuntu 16.04 with Python 3.7.
+This training script works on Mac OS X 10.14 and Ubuntu 16.04 with Python 3.7.  You can get miniconda from https://docs.conda.io/en/latest/miniconda.html if you don't have it, or install the dependencies from [`environment.yml`](environment.yml) manually.
 
 ```
 git clone https://github.com/openai/train-procgen.git
-pip install -r train-procgen/requirements.txt
-# install baselines repo
+conda env update --name train-procgen --file train-procgen/environment.yml
+conda activate train-procgen
 pip install https://github.com/openai/baselines/archive/9ee399f5b20cd70ac0a871927a6cf043b478193f.zip
 pip install -e train-procgen
 ```
