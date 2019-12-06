@@ -6,9 +6,17 @@
 
 This is code for training agents for some of the experiments in [Leveraging Procedural Generation to Benchmark Reinforcement Learning](https://cdn.openai.com/procgen.pdf) [(citation)](#citation).  The code for the environments is in the [Procgen Benchmark](https://github.com/openai/procgen) repo.
 
+Supported platforms:
+
+- macOS 10.14 (Mojave), Ubuntu 16.04
+
+Supported Pythons:
+
+- 3.7 64-bit
+
 ## Install
 
-This training script works on Mac OS X 10.14 and Ubuntu 16.04 with Python 3.7.  You can get miniconda from https://docs.conda.io/en/latest/miniconda.html if you don't have it, or install the dependencies from [`environment.yml`](environment.yml) manually.
+You can get miniconda from https://docs.conda.io/en/latest/miniconda.html if you don't have it, or install the dependencies from [`environment.yml`](environment.yml) manually.
 
 ```
 git clone https://github.com/openai/train-procgen.git
