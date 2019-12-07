@@ -8,7 +8,8 @@ This is code for training agents for some of the experiments in [Leveraging Proc
 
 Supported platforms:
 
-- macOS 10.14 (Mojave), Ubuntu 16.04
+- macOS 10.14 (Mojave)
+- Ubuntu 16.04
 
 Supported Pythons:
 
