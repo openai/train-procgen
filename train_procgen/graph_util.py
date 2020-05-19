@@ -125,7 +125,7 @@ def plot_experiment(run_directory_prefix, titles=None, suffixes=[''], normalizat
             normalized_data = np.sum(all_values, axis=0)
             normalized_data = normalized_data / np.sum(game_weights)
             title = 'Mean Normalized Score'
-            plot_values(ax, normalized_data, title=None, color_idx=suffix_idx, label=label, **kwargs)
+            plot_values(ax, normalized_data, title=None, color_idx=suffix_idx, label=suffix, **kwargs)
 
     if len(suffixes) > 1:
         if num_visible_plots == 1:
