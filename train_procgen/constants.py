@@ -19,18 +19,18 @@ ENV_NAMES = [
 
 HARD_GAME_RANGES = {
     'coinrun': [5, 10],
-    'starpilot': [1.5, 35], ##
-    'caveflyer': [2, 13.4], #
-    'dodgeball': [1.5, 19], #.
-    'fruitbot': [-.5, 27.2], ##
-    'chaser': [.5, 14.2], #
+    'starpilot': [1.5, 35],
+    'caveflyer': [2, 13.4],
+    'dodgeball': [1.5, 19],
+    'fruitbot': [-.5, 27.2],
+    'chaser': [.5, 14.2],
     'miner': [1.5, 20],
     'jumper': [1, 10],
     'leaper': [1.5, 10],
     'maze': [4, 10],
-    'bigfish': [0, 40], #.
+    'bigfish': [0, 40],
     'heist': [2, 10],
-    'climber': [1, 12.6], #
+    'climber': [1, 12.6],
     'plunder': [3, 30],
     'ninja': [2, 10],
     'bossfight': [.5, 13],
@@ -38,18 +38,18 @@ HARD_GAME_RANGES = {
 
 EASY_GAME_RANGES = {
     'coinrun': [5, 10],
-    'starpilot': [2.5, 64], ##
-    'caveflyer': [3.5, 12], #
-    'dodgeball': [1.5, 19], #.
-    'fruitbot': [-1.5, 32.4], ##
-    'chaser': [.5, 13], #
+    'starpilot': [2.5, 64],
+    'caveflyer': [3.5, 12],
+    'dodgeball': [1.5, 19],
+    'fruitbot': [-1.5, 32.4],
+    'chaser': [.5, 13],
     'miner': [1.5, 13],
     'jumper': [1, 10],
     'leaper': [1.5, 10],
     'maze': [5, 10],
-    'bigfish': [1, 40], #.
+    'bigfish': [1, 40],
     'heist': [3.5, 10],
-    'climber': [2, 12.6], #
+    'climber': [2, 12.6],
     'plunder': [4.5, 30],
     'ninja': [3.5, 10],
     'bossfight': [.5, 13],
