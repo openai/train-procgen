@@ -11,13 +11,17 @@ def main():
     parser.add_argument('--distribution_mode', type=str, default='easy', help="Environment distribution_mode ('easy' or 'hard')")
     parser.add_argument('--normalize_and_reduce', dest='normalize_and_reduce', action='store_true')
     parser.add_argument('--restrict_training_set', dest='restrict_training_set', action='store_true')
+    parser.add_argument('--save', dest='save', action='store_true')
     args = parser.parse_args()
 
-    main_pcg_sample_entry(args.distribution_mode, args.normalize_and_reduce, args.restrict_training_set)
+    run_directory_prefix = main_pcg_sample_entry(args.distribution_mode, args.normalize_and_reduce, args.restrict_training_set)
 
     plt.tight_layout()
 
-    plt.show()
+    if args.save:
+        plt.savefig(f'results/{run_directory_prefix}.pdf')
+    else:
+        plt.show()
 
 def main_pcg_sample_entry(distribution_mode, normalize_and_reduce, restrict_training_set):
     params = {
@@ -46,7 +50,8 @@ def main_pcg_sample_entry(distribution_mode, normalize_and_reduce, restrict_trai
     y_label = 'Score'
     x_label = 'Timesteps (M)'
 
-    kwargs['run_directory_prefix'] = f"{distribution_mode}-{num_train_levels if restrict_training_set else 'all'}-run"
+    run_directory_prefix = f"{distribution_mode}-{num_train_levels if restrict_training_set else 'all'}-run"
+    kwargs['run_directory_prefix'] = run_directory_prefix
 
     # We throw out the first few datapoints to give the episodic reward buffers time to fill up
     # Otherwise, there could be a short-episode bias
@@ -68,6 +73,8 @@ def main_pcg_sample_entry(distribution_mode, normalize_and_reduce, restrict_trai
         ax0 = switch_to_outer_plot(fig)
         ax0.set_xlabel(x_label, labelpad=40)
         ax0.set_ylabel(y_label, labelpad=35)
+
+    return run_directory_prefix
 
 if __name__ == '__main__':
     main()
