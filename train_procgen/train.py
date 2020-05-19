@@ -13,10 +13,7 @@ from baselines import logger
 from mpi4py import MPI
 import argparse
 
-LOG_DIR = '/tmp/procgen'
-
-def main():
-    num_envs = 64
+def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='/tmp/procgen', comm=None):
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -25,37 +22,18 @@ def main():
     nminibatches = 8
     ppo_epochs = 3
     clip_range = .2
-    timesteps_per_proc = 50_000_000
     use_vf_clipping = True
 
-    parser = argparse.ArgumentParser(description='Process procgen training arguments.')
-    parser.add_argument('--env_name', type=str, default='coinrun')
-    parser.add_argument('--distribution_mode', type=str, default='hard', choices=["easy", "hard", "exploration", "memory", "extreme"])
-    parser.add_argument('--num_levels', type=int, default=0)
-    parser.add_argument('--start_level', type=int, default=0)
-    parser.add_argument('--test_worker_interval', type=int, default=0)
-
-    args = parser.parse_args()
-
-    test_worker_interval = args.test_worker_interval
-
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-
-    is_test_worker = False
-
-    if test_worker_interval > 0:
-        is_test_worker = comm.Get_rank() % test_worker_interval == (test_worker_interval - 1)
-
     mpi_rank_weight = 0 if is_test_worker else 1
-    num_levels = 0 if is_test_worker else args.num_levels
+    num_levels = 0 if is_test_worker else num_levels
 
-    log_comm = comm.Split(1 if is_test_worker else 0, 0)
-    format_strs = ['csv', 'stdout'] if log_comm.Get_rank() == 0 else []
-    logger.configure(dir=LOG_DIR, format_strs=format_strs)
+    if log_dir is not None:
+        log_comm = comm.Split(1 if is_test_worker else 0, 0)
+        format_strs = ['csv', 'stdout'] if log_comm.Get_rank() == 0 else []
+        logger.configure(comm=log_comm, dir=log_dir, format_strs=format_strs)
 
     logger.info("creating environment")
-    venv = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, num_levels=num_levels, start_level=args.start_level, distribution_mode=args.distribution_mode)
+    venv = ProcgenEnv(num_envs=num_envs, env_name=env_name, num_levels=num_levels, start_level=start_level, distribution_mode=distribution_mode)
     venv = VecExtractDictObs(venv, "rgb")
 
     venv = VecMonitor(
@@ -96,6 +74,36 @@ def main():
         vf_coef=0.5,
         max_grad_norm=0.5,
     )
+
+def main():
+    parser = argparse.ArgumentParser(description='Process procgen training arguments.')
+    parser.add_argument('--env_name', type=str, default='coinrun')
+    parser.add_argument('--num_envs', type=int, default=64)
+    parser.add_argument('--distribution_mode', type=str, default='hard', choices=["easy", "hard", "exploration", "memory", "extreme"])
+    parser.add_argument('--num_levels', type=int, default=0)
+    parser.add_argument('--start_level', type=int, default=0)
+    parser.add_argument('--test_worker_interval', type=int, default=0)
+    parser.add_argument('--timesteps_per_proc', type=int, default=50_000_000)
+
+    args = parser.parse_args()
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    is_test_worker = False
+    test_worker_interval = args.test_worker_interval
+
+    if test_worker_interval > 0:
+        is_test_worker = rank % test_worker_interval == (test_worker_interval - 1)
+
+    train_fn(args.env_name,
+        args.num_envs,
+        args.distribution_mode,
+        args.num_levels,
+        args.start_level,
+        args.timesteps_per_proc,
+        is_test_worker=is_test_worker,
+        comm=comm)
 
 if __name__ == '__main__':
     main()

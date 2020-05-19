@@ -89,6 +89,38 @@ View training options:
 python -m train_procgen.train --help
 ```
 
+## Reproduce and Visualize Results
+
+Sample efficiency on hard environments (results/hard-all-runN):
+
+```
+mpiexec -np 4 python -m train_procgen.train --env_name ENV_NAME --distribution_mode hard
+python -m train_procgen.graph --distribution_mode hard
+```
+
+Sample efficiency on easy environments (results/easy-all-runN):
+
+```
+python -m train_procgen.train --env_name ENV_NAME --distribution_mode easy
+python -m train_procgen.graph --distribution_mode easy
+```
+
+Generalization on hard environments using 500 training levels (results/hard-500-runN):
+
+```
+mpiexec -np 8 python -m train_procgen.train --env_name ENV_NAME --num_levels 500 --distribution_mode hard --test_worker_interval 2
+python -m train_procgen.graph --distribution_mode hard --restrict_training_set
+```
+
+Generalization on easy environments using 200 training levels (results/easy-200-runN):
+
+```
+mpiexec -np 2 python -m train_procgen.train --env_name ENV_NAME --num_levels 200 --distribution_mode easy --test_worker_interval 2
+python -m train_procgen.graph --distribution_mode easy --restrict_training_set
+```
+
+Pass `--normalize_and_reduce` to compute and visualize the mean normalized return with `train_procgen.graph`.
+
 # Citation
 
 Please cite using the following bibtex entry:
