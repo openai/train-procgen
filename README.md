@@ -6,6 +6,8 @@
 
 This is code for training agents for some of the experiments in [Leveraging Procedural Generation to Benchmark Reinforcement Learning](https://cdn.openai.com/procgen.pdf) [(citation)](#citation).  The code for the environments is in the [Procgen Benchmark](https://github.com/openai/procgen) repo.
 
+We're currently running a competition which uses these environments to measure sample efficiency and generalization in RL. You can learn more and register [here](https://www.aicrowd.com/challenges/neurips-2020-procgen-competition).
+
 Supported platforms:
 
 - macOS 10.14 (Mojave)
