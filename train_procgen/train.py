@@ -12,8 +12,9 @@ from baselines.common.vec_env import (
 from baselines import logger
 from mpi4py import MPI
 import argparse
+from .alternate_ppo2 import alt_ppo2
 
-def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='/tmp/procgen', comm=None):
+def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='/tmp/procgen', comm=None, alternate_ppo=False):
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -52,28 +53,52 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
     conv_fn = lambda x: build_impala_cnn(x, depths=[16,32,32], emb_size=256)
 
     logger.info("training")
-    ppo2.learn(
-        env=venv,
-        network=conv_fn,
-        total_timesteps=timesteps_per_proc,
-        save_interval=0,
-        nsteps=nsteps,
-        nminibatches=nminibatches,
-        lam=lam,
-        gamma=gamma,
-        noptepochs=ppo_epochs,
-        log_interval=1,
-        ent_coef=ent_coef,
-        mpi_rank_weight=mpi_rank_weight,
-        clip_vf=use_vf_clipping,
-        comm=comm,
-        lr=learning_rate,
-        cliprange=clip_range,
-        update_fn=None,
-        init_fn=None,
-        vf_coef=0.5,
-        max_grad_norm=0.5,
-    )
+    if alternate_ppo:
+        alt_ppo2.learn(
+            env=venv,
+            network=conv_fn,
+            total_timesteps=timesteps_per_proc,
+            save_interval=0,
+            nsteps=nsteps,
+            nminibatches=nminibatches,
+            lam=lam,
+            gamma=gamma,
+            noptepochs=ppo_epochs,
+            log_interval=1,
+            ent_coef=ent_coef,
+            mpi_rank_weight=mpi_rank_weight,
+            clip_vf=use_vf_clipping,
+            comm=comm,
+            lr=learning_rate,
+            cliprange=clip_range,
+            update_fn=None,
+            init_fn=None,
+            vf_coef=0.5,
+            max_grad_norm=0.5,
+        )
+    else:
+        ppo2.learn(
+            env=venv,
+            network=conv_fn,
+            total_timesteps=timesteps_per_proc,
+            save_interval=0,
+            nsteps=nsteps,
+            nminibatches=nminibatches,
+            lam=lam,
+            gamma=gamma,
+            noptepochs=ppo_epochs,
+            log_interval=1,
+            ent_coef=ent_coef,
+            mpi_rank_weight=mpi_rank_weight,
+            clip_vf=use_vf_clipping,
+            comm=comm,
+            lr=learning_rate,
+            cliprange=clip_range,
+            update_fn=None,
+            init_fn=None,
+            vf_coef=0.5,
+            max_grad_norm=0.5,
+        )
 
 def main():
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
@@ -84,6 +109,7 @@ def main():
     parser.add_argument('--start_level', type=int, default=0)
     parser.add_argument('--test_worker_interval', type=int, default=0)
     parser.add_argument('--timesteps_per_proc', type=int, default=50_000_000)
+    parser.add_argument('--alternate_ppo', action='store_true')
 
     args = parser.parse_args()
 
@@ -103,7 +129,9 @@ def main():
         args.start_level,
         args.timesteps_per_proc,
         is_test_worker=is_test_worker,
-        comm=comm)
+        comm=comm,
+        alternate_ppo=args.alternate_ppo,
+        )
 
 if __name__ == '__main__':
     main()
