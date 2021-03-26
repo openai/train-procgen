@@ -14,7 +14,7 @@ from mpi4py import MPI
 import argparse
 from .alternate_ppo2 import alt_ppo2
 
-def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='/tmp/procgen', comm=None, alternate_ppo=False):
+def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False):
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -58,7 +58,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
             env=venv,
             network=conv_fn,
             total_timesteps=timesteps_per_proc,
-            save_interval=0,
+            save_interval=1,
             nsteps=nsteps,
             nminibatches=nminibatches,
             lam=lam,
@@ -81,7 +81,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
             env=venv,
             network=conv_fn,
             total_timesteps=timesteps_per_proc,
-            save_interval=0,
+            save_interval=1,
             nsteps=nsteps,
             nminibatches=nminibatches,
             lam=lam,
@@ -103,6 +103,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
 def main():
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
     parser.add_argument('--env_name', type=str, default='coinrun')
+    parser.add_argument('--log_dir', type=str, default='./tmp/procgen')
     parser.add_argument('--num_envs', type=int, default=64)
     parser.add_argument('--distribution_mode', type=str, default='hard', choices=["easy", "hard", "exploration", "memory", "extreme"])
     parser.add_argument('--num_levels', type=int, default=0)
@@ -129,6 +130,7 @@ def main():
         args.start_level,
         args.timesteps_per_proc,
         is_test_worker=is_test_worker,
+        log_dir=args.log_dir,
         comm=comm,
         alternate_ppo=args.alternate_ppo,
         )
