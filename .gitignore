@@ -3,3 +3,4 @@ __pycache__/
 .generated/
 *.egg-info/
 saved_models/
+checkpoints/
