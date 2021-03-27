@@ -14,7 +14,7 @@ from mpi4py import MPI
 import argparse
 from .alternate_ppo2 import alt_ppo2
 
-def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False):
+def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False, do_eval=False, eval_num_env=None, eval_env_name=None, eval_num_levels=None, eval_start_level=None, eval_distribution_mode=None):
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -42,6 +42,17 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
     )
 
     venv = VecNormalize(venv=venv, ob=False)
+    
+    eval_env = None
+    if do_eval:
+        eval_env = ProcgenEnv(num_envs=eval_num_envs, env_name=eval_env_name, num_levels=eval_num_levels, start_level=eval_start_level, distribution_mode=eval_distribution_mode)
+        eval_env = VecExtractDictObs(eval_env, "rgb")
+
+        eval_env = VecMonitor(
+            venv=eval_env, filename=None, keep_buf=100,
+        )
+
+        eval_env = VecNormalize(venv=eval_env, ob=False)
 
     logger.info("creating tf session")
     setup_mpi_gpus()
@@ -56,6 +67,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
     if alternate_ppo:
         alt_ppo2.learn(
             env=venv,
+            eval_env=eval_env,
             network=conv_fn,
             total_timesteps=timesteps_per_proc,
             save_interval=1,
@@ -79,6 +91,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
     else:
         ppo2.learn(
             env=venv,
+            eval_env=eval_env,
             network=conv_fn,
             total_timesteps=timesteps_per_proc,
             save_interval=1,
@@ -102,15 +115,24 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
 
 def main():
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
-    parser.add_argument('--env_name', type=str, default='coinrun')
-    parser.add_argument('--log_dir', type=str, default='./tmp/procgen')
+    parser.add_argument('--env_name', type=str, default='fruitbot')
+    parser.add_argument('--log_dir', type=str, default='./log/')
     parser.add_argument('--num_envs', type=int, default=64)
-    parser.add_argument('--distribution_mode', type=str, default='hard', choices=["easy", "hard", "exploration", "memory", "extreme"])
-    parser.add_argument('--num_levels', type=int, default=0)
-    parser.add_argument('--start_level', type=int, default=0)
+    parser.add_argument('--distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
+    parser.add_argument('--num_levels', type=int, default=500)
+    parser.add_argument('--start_level', type=int, default=500)
     parser.add_argument('--test_worker_interval', type=int, default=0)
     parser.add_argument('--timesteps_per_proc', type=int, default=50_000_000)
     parser.add_argument('--alternate_ppo', action='store_true')
+    
+    # For evaluation (validation set)
+    parser.add_argument('--do_eval', action='store_true')
+    parser.add_argument('--eval_num_envs', type=int, default=64)
+    parser.add_argument('--eval_env_name', type=str, default='fruitbot')
+    parser.add_argument('--eval_num_levels', type=int, default=500)
+    parser.add_argument('--eval_start_level', type=int, default=500)
+    parser.add_argument('--eval_distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
+
 
     args = parser.parse_args()
 
@@ -124,16 +146,22 @@ def main():
         is_test_worker = rank % test_worker_interval == (test_worker_interval - 1)
 
     train_fn(args.env_name,
-        args.num_envs,
-        args.distribution_mode,
-        args.num_levels,
-        args.start_level,
-        args.timesteps_per_proc,
-        is_test_worker=is_test_worker,
-        log_dir=args.log_dir,
-        comm=comm,
-        alternate_ppo=args.alternate_ppo,
-        )
+            args.num_envs,
+            args.distribution_mode,
+            args.num_levels,
+            args.start_level,
+            args.timesteps_per_proc,
+            is_test_worker=is_test_worker,
+            log_dir=args.log_dir,
+            comm=comm,
+            alternate_ppo=args.alternate_ppo,
+            do_eval=args.do_eval,
+            eval_num_env=args.eval_num_env,
+            eval_env_name=args.eval_env_name,
+            eval_num_levels=args.eval_num_levels,
+            eval_start_level=args.eval_start_level,
+            eval_distribution_mode=args.eval_distribution_mode
+            )
 
 if __name__ == '__main__':
     main()
