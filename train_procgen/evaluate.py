@@ -13,6 +13,7 @@ from baselines import logger
 from mpi4py import MPI
 import argparse
 from .alternate_ppo2 import alt_ppo2
+import os
 
 def eval_fn(load_path, log_dir='./tmp/procgen', comm=None):
 #(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False):
@@ -22,6 +23,24 @@ def eval_fn(load_path, log_dir='./tmp/procgen', comm=None):
 # choose best model based on val results
 # run best model on test
 # >> print & log(?) result
+
+# if model_fn is None:
+#         from baselines.ppo2.model import Model
+#         model_fn = Model
+
+#     model = model_fn(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
+#                     nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
+#                     max_grad_norm=max_grad_norm, comm=comm, mpi_rank_weight=mpi_rank_weight)
+
+#     if load_path is not None:
+#         model.load(load_path)
+#     # Instantiate the runner object
+#     runner = Runner(env=env, model=model, nsteps=nsteps, gamma=gamma, lam=lam)
+#     if eval_env is not None:
+#         eval_runner = Runner(env = eval_env, model = model, nsteps = nsteps, gamma = gamma, lam= lam)
+
+# --env_name fruitbot --distribution_mode easy --num_levels 500 --start_level 500
+
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -113,6 +132,21 @@ def eval_fn(load_path, log_dir='./tmp/procgen', comm=None):
             vf_coef=0.5,
             max_grad_norm=0.5,
         )
+    #   for chkpts in train_# path given in load_model args:
+    #       calculate loss and average rewards in ppo_metrics
+    #       find optimal model based on min loss
+    #   return optimal model
+
+def optimal_chkpt(path, model):
+    best_loss = float("inf")
+    best_chkpt = None
+    for chkpt in os.listdir(path):
+        model.load(path + chkpt)
+        curr_loss = model_avg_loss(validation_data, model)
+        if curr_loss < best_loss:
+            best_loss = curr_loss
+            best_chkpt = path + chkpt
+    return best_chkpt
 
 def main():
     parser = argparse.ArgumentParser(description='Process procgen evaluation arguments.')
@@ -121,7 +155,7 @@ def main():
 
     args = parser.parse_args()
 
-    comm = MPI.COMM_WORLD
+    comm = MPI.COMM_WORLD 
 
     eval_fn(args.load_path,
             log_dir=args.log_dir,
