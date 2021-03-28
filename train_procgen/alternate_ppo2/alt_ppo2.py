@@ -128,8 +128,6 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
     nupdates = total_timesteps//nbatch
     for update in range(1, nupdates+1):
         assert nbatch % nminibatches == 0
-        # Start timer
-        tstart = time.perf_counter()
         frac = 1.0 - (update - 1.0) / nupdates
         # Calculate the learning rate
         lrnow = lr(frac)
@@ -217,6 +215,80 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
             model.save(savepath)
 
     return model
+
+def eval(*, network, env, eval_env = None, seed=None, nsteps=2048, ent_coef=0.0, lr=3e-4,
+            vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
+            log_interval=10, nminibatches=4, noptepochs=4, cliprange=0.2,
+            save_interval=10, load_path=None, model_fn=None, update_fn=None, init_fn=None, mpi_rank_weight=1, comm=None, **network_kwargs):
+
+    set_global_seeds(seed)
+
+    if isinstance(lr, float): lr = constfn(lr)
+    else: assert callable(lr)
+    if isinstance(cliprange, float): cliprange = constfn(cliprange)
+    else: assert callable(cliprange)
+
+    policy = build_policy(env, network, **network_kwargs)
+
+    # Get the nb of env
+    nenvs = env.num_envs
+
+    # Get state_space and action_space
+    ob_space = env.observation_space
+    ac_space = env.action_space
+
+    # Calculate the batch_size
+    nbatch = nenvs * nsteps
+    nbatch_train = nbatch // nminibatches
+    is_mpi_root = (MPI is None or MPI.COMM_WORLD.Get_rank() == 0)
+
+    # Instantiate the model object (that creates act_model and train_model)
+    if model_fn is None:
+        from baselines.ppo2.model import Model
+        model_fn = Model
+
+    model = model_fn(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
+                    nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
+                    max_grad_norm=max_grad_norm, comm=comm, mpi_rank_weight=mpi_rank_weight)
+
+    if load_path is not None:
+        model.load(load_path)
+    # Instantiate the runner object
+    eval_runner = Runner(env = eval_env, model = model, nsteps = nsteps, gamma = gamma, lam = lam)
+
+    eval_epinfobuf = deque(maxlen=100)
+
+    if init_fn is not None:
+        init_fn()
+
+    # Start total timer
+    tfirststart = time.perf_counter()
+    
+    # Calculate the cliprange
+    cliprangenow = cliprange(frac)
+
+    if update % log_interval == 0 and is_mpi_root: logger.info('Stepping environment...')
+
+    # Get minibatch
+    eval_obs, eval_returns, eval_masks, eval_actions, eval_values, eval_neglogpacs, eval_states, eval_epinfos = eval_runner.run() #pylint: disable=E0632
+
+    logger.info('Done.')
+
+    eval_epinfobuf.extend(eval_epinfos)
+    
+    # End timer
+    tnow = time.perf_counter()
+
+    logger.logkv('eval_eprewmean', safemean([epinfo['r'] for epinfo in eval_epinfobuf]) )
+    logger.logkv('eval_eplenmean', safemean([epinfo['l'] for epinfo in eval_epinfobuf]) )
+    logger.logkv('misc/time_elapsed', tnow - tfirststart)
+    for (lossval, lossname) in zip(lossvals, model.loss_names):
+        logger.logkv('loss/' + lossname, lossval)
+
+    logger.dumpkvs()
+    
+    return model
+
 # Avoid division error when calculate the mean (in our case if epinfo is empty returns np.nan, not return an error)
 def safemean(xs):
     return np.nan if len(xs) == 0 else np.mean(xs)
