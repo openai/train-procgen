@@ -273,8 +273,6 @@ def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0,
     logger.logkv('eval_eprewmean', safemean([epinfo['r'] for epinfo in eval_epinfobuf]) )
     logger.logkv('eval_eplenmean', safemean([epinfo['l'] for epinfo in eval_epinfobuf]) )
     logger.logkv('misc/time_elapsed', tnow - tfirststart)
-    for (lossval, lossname) in zip(lossvals, model.loss_names):
-        logger.logkv('loss/' + lossname, lossval)
 
     logger.dumpkvs()
     

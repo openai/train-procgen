@@ -52,7 +52,7 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
 
     logger.info("evaluating")
     
-    if os.path.isfile(path):
+    if os.path.isfile(load_path):
         alt_ppo2.eval(
             network=conv_fn,
             eval_env=venv,
@@ -65,7 +65,7 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
             log_interval=1,
             nminibatches=nminibatches,
             noptepochs=ppo_epochs,
-            load_path=path,
+            load_path=load_path,
             update_fn=None,
             init_fn=None,
             mpi_rank_weight=mpi_rank_weight,
@@ -74,8 +74,6 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
             lr=learning_rate,
             cliprange=clip_range,
         )
-    if os.path.isdir(path):
-        pass
         
     return 
 # def model_avg_loss(env, model):
@@ -111,7 +109,11 @@ def main():
 
     comm = MPI.COMM_WORLD 
 
-    eval_fn(args.load_path,
+    if os.path.isdir(args.load_model):
+        for chkpt in os.listdir(args.load_model):
+            eval_fn(args.load_model + "/" + chkpt, env_name=args.env_name, num_envs=args.num_envs, distribution_mode=args.distribution_mode, num_levels=args.num_levels, start_level=args.start_level, log_dir=args.log_dir + "/" + chkpt, comm=comm)
+    else:
+        eval_fn(args.load_model,
             log_dir=args.log_dir,
             env_name=args.env_name,
             num_envs=args.num_envs,
