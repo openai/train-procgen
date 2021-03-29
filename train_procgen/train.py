@@ -12,7 +12,7 @@ from baselines.common.vec_env import (
 from baselines import logger
 from mpi4py import MPI
 import argparse
-from .alternate_ppo2 import alt_ppo2
+from alternate_ppo2 import alt_ppo2
 
 def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False, do_eval=False, eval_num_env=None, eval_env_name=None, eval_num_levels=None, eval_start_level=None, eval_distribution_mode=None):
     learning_rate = 5e-4
@@ -42,7 +42,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
     )
 
     venv = VecNormalize(venv=venv, ob=False)
-    
+
     eval_env = None
     if do_eval:
         eval_env = ProcgenEnv(num_envs=eval_num_envs, env_name=eval_env_name, num_levels=eval_num_levels, start_level=eval_start_level, distribution_mode=eval_distribution_mode)
@@ -124,7 +124,7 @@ def main():
     parser.add_argument('--test_worker_interval', type=int, default=0)
     parser.add_argument('--timesteps_per_proc', type=int, default=50_000_000)
     parser.add_argument('--alternate_ppo', action='store_true')
-    
+
     # For evaluation (validation set)
     parser.add_argument('--do_eval', action='store_true')
     parser.add_argument('--eval_num_envs', type=int, default=64)

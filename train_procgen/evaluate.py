@@ -12,10 +12,11 @@ from baselines.common.vec_env import (
 from baselines import logger
 from mpi4py import MPI
 import argparse
-from .alternate_ppo2 import alt_ppo2
+from alternate_ppo2 import alt_ppo2
 import os
 
 def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None):
+
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -51,7 +52,6 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
     conv_fn = lambda x: build_impala_cnn(x, depths=[16,32,32], emb_size=256)
 
     logger.info("evaluating")
-    
     if os.path.isfile(load_path):
         alt_ppo2.eval(
             network=conv_fn,
@@ -74,10 +74,9 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
             lr=learning_rate,
             cliprange=clip_range,
         )
-        
-    return 
+    return
 # def model_avg_loss(env, model):
-    
+
 # def chkpt_metric(path, model, env):
 #     model.load(path)
 #     loss = model_loss(env, model)
@@ -107,21 +106,17 @@ def main():
 
     args = parser.parse_args()
 
-    comm = MPI.COMM_WORLD 
+    comm = MPI.COMM_WORLD
 
-    if os.path.isdir(args.load_model):
-        for chkpt in os.listdir(args.load_model):
-            eval_fn(args.load_model + "/" + chkpt, env_name=args.env_name, num_envs=args.num_envs, distribution_mode=args.distribution_mode, num_levels=args.num_levels, start_level=args.start_level, log_dir=args.log_dir + "/" + chkpt, comm=comm)
-    else:
-        eval_fn(args.load_model,
-            log_dir=args.log_dir,
-            env_name=args.env_name,
-            num_envs=args.num_envs,
-            distribution_mode=args.distribution_mode,
-            num_levels=args.num_levels,
-            start_level=args.start_level,
-            comm=comm,
-           )
+    eval_fn(args.load_model,
+        log_dir=args.log_dir,
+        env_name=args.env_name,
+        num_envs=args.num_envs,
+        distribution_mode=args.distribution_mode,
+        num_levels=args.num_levels,
+        start_level=args.start_level,
+        comm=comm,
+       )
 
 if __name__ == '__main__':
     main()
