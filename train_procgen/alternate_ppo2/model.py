@@ -156,4 +156,3 @@ class Model(object):
             self.stats_list + [self._train_op],
             td_map
         )[:-1]
-

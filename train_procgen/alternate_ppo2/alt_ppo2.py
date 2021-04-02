@@ -101,7 +101,7 @@ def learn(*, network, env, total_timesteps, eval_env=None, seed=None, nsteps=204
 
     # Instantiate the model object (that creates act_model and train_model)
     if model_fn is None:
-        from baselines.ppo2.model import Model
+        from alternate_ppo2.model import Model
         model_fn = Model
 
     model = model_fn(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
@@ -216,66 +216,42 @@ def learn(*, network, env, total_timesteps, eval_env=None, seed=None, nsteps=204
 
     return model
 
-def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0, 
+def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0,
             vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
-            log_interval=10, nminibatches=4, noptepochs=4, 
-            load_path=None, model_fn=None, update_fn=None, init_fn=None, mpi_rank_weight=1, comm=None, **network_kwargs):
+            log_interval=10, nminibatches=4, noptepochs=4,
+            load_path=None, model_fn=None, update_fn=None, init_fn=None, mpi_rank_weight=1, comm=None, policy=None, nenvs=None, ob_space=None, ac_space=None, nbatch=None, nbatch_train=None, model=None, num_trials=3, **network_kwargs):
+    for trial in range(num_trials):
+        if load_path is not None:
+            model.load(load_path)
+        # Instantiate the runner object
+        eval_runner = Runner(env=eval_env, model=model, nsteps=nsteps, gamma=gamma, lam=lam)
 
-    set_global_seeds(seed)
- 
-    policy = build_policy(eval_env, network, **network_kwargs)
+        eval_epinfobuf = deque(maxlen=100)
 
-    # Get the nb of env
-    nenvs = eval_env.num_envs
+        if init_fn is not None:
+            init_fn()
 
-    # Get state_space and action_space
-    ob_space = eval_env.observation_space
-    ac_space = eval_env.action_space
+        # Start total timer
+        tfirststart = time.perf_counter()
 
-    # Calculate the batch_size
-    nbatch = nenvs * nsteps
-    nbatch_train = nbatch // nminibatches
+        logger.info('Stepping environment...')
 
-    # Instantiate the model object (that creates act_model and train_model)
-    if model_fn is None:
-        from baselines.ppo2.model import Model
-        model_fn = Model
+        # Get minibatch
+        eval_obs, eval_returns, eval_masks, eval_actions, eval_values, eval_neglogpacs, eval_states, eval_epinfos = eval_runner.run() #pylint: disable=E0632
 
-    model = model_fn(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
-                    nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
-                    max_grad_norm=max_grad_norm, comm=comm, mpi_rank_weight=mpi_rank_weight)
+        logger.info('Done.')
 
-    if load_path is not None:
-        model.load(load_path)
-    # Instantiate the runner object
-    eval_runner = Runner(env=eval_env, model=model, nsteps=nsteps, gamma=gamma, lam=lam)
+        eval_epinfobuf.extend(eval_epinfos)
 
-    eval_epinfobuf = deque(maxlen=100)
+        # End timer
+        tnow = time.perf_counter()
 
-    if init_fn is not None:
-        init_fn()
+        logger.logkv('eval_eprewmean', safemean([epinfo['r'] for epinfo in eval_epinfobuf]) )
+        logger.logkv('eval_eplenmean', safemean([epinfo['l'] for epinfo in eval_epinfobuf]) )
+        logger.logkv('misc/time_elapsed', tnow - tfirststart)
 
-    # Start total timer
-    tfirststart = time.perf_counter()
-    
-    logger.info('Stepping environment...')
+        logger.dumpkvs()
 
-    # Get minibatch
-    eval_obs, eval_returns, eval_masks, eval_actions, eval_values, eval_neglogpacs, eval_states, eval_epinfos = eval_runner.run() #pylint: disable=E0632
-
-    logger.info('Done.')
-
-    eval_epinfobuf.extend(eval_epinfos)
-    
-    # End timer
-    tnow = time.perf_counter()
-
-    logger.logkv('eval_eprewmean', safemean([epinfo['r'] for epinfo in eval_epinfobuf]) )
-    logger.logkv('eval_eplenmean', safemean([epinfo['l'] for epinfo in eval_epinfobuf]) )
-    logger.logkv('misc/time_elapsed', tnow - tfirststart)
-
-    logger.dumpkvs()
-    
     return model
 
 # Avoid division error when calculate the mean (in our case if epinfo is empty returns np.nan, not return an error)

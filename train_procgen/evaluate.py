@@ -14,8 +14,10 @@ from mpi4py import MPI
 import argparse
 from alternate_ppo2 import alt_ppo2
 import os
+from baselines.common import set_global_seeds
+from baselines.common.policies import build_policy
 
-def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None):
+def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None, num_trials=3):
 
     learning_rate = 5e-4
     ent_coef = .01
@@ -26,8 +28,13 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
     ppo_epochs = 3
     clip_range = .2
     use_vf_clipping = True
+    vf_coef = 0.5
+    max_grad_norm = 0.5
 
     mpi_rank_weight = 1
+    log_interval = 1
+    seed=None
+
     log_comm = comm.Split(0, 0)
     format_strs = ['csv', 'stdout'] if log_comm.Get_rank() == 0 else []
     logger.configure(comm=log_comm, dir=log_dir, format_strs=format_strs)
@@ -51,48 +58,93 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
 
     conv_fn = lambda x: build_impala_cnn(x, depths=[16,32,32], emb_size=256)
 
-    logger.info("evaluating")
+    logger.info(f"evaluating")
+
+    set_global_seeds(seed)
+
+    policy = build_policy(venv, conv_fn)
+
+    # Get the nb of env
+    nenvs = venv.num_envs
+    # Get state_space and action_space
+    ob_space = venv.observation_space
+    ac_space = venv.action_space
+
+    # Calculate the batch_size
+    nbatch = nenvs * nsteps
+    nbatch_train = nbatch // nminibatches
+
+    # Instantiate the model object (that creates act_model and train_model)
+    from alternate_ppo2.model import Model
+    model_fn = Model
+
+    model = model_fn(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,
+                    nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
+                    max_grad_norm=max_grad_norm, comm=comm, mpi_rank_weight=mpi_rank_weight)
+
     if os.path.isfile(load_path):
         alt_ppo2.eval(
             network=conv_fn,
             eval_env=venv,
             nsteps=nsteps,
             ent_coef=ent_coef,
-            vf_coef=0.5,
-            max_grad_norm=0.5,
+            vf_coef=vf_coef,
+            max_grad_norm=max_grad_norm,
             gamma=gamma,
             lam=lam,
-            log_interval=1,
+            log_interval=log_interval,
             nminibatches=nminibatches,
             noptepochs=ppo_epochs,
             load_path=load_path,
-            update_fn=None,
-            init_fn=None,
             mpi_rank_weight=mpi_rank_weight,
             comm=comm,
             clip_vf=use_vf_clipping,
             lr=learning_rate,
             cliprange=clip_range,
+            policy=policy,
+            nenvs=nenvs,
+            ob_space=ob_space,
+            ac_space=ac_space,
+            nbatch=nbatch,
+            nbatch_train=nbatch_train,
+            model_fn=model_fn,
+            model=model,
+            num_trials=num_trials
         )
+    elif os.path.isdir(load_path):
+        for file in os.listdir(load_path):
+            log_comm = comm.Split(0, 0)
+            format_strs = ['csv', 'stdout'] if log_comm.Get_rank() == 0 else []
+            logger.configure(comm=log_comm, dir=log_dir+'/'+file, format_strs=format_strs)
+            alt_ppo2.eval(
+                network=conv_fn,
+                eval_env=venv,
+                nsteps=nsteps,
+                ent_coef=ent_coef,
+                vf_coef=vf_coef,
+                max_grad_norm=max_grad_norm,
+                gamma=gamma,
+                lam=lam,
+                log_interval=log_interval,
+                nminibatches=nminibatches,
+                noptepochs=ppo_epochs,
+                load_path=load_path+'/'+file,
+                mpi_rank_weight=mpi_rank_weight,
+                comm=comm,
+                clip_vf=use_vf_clipping,
+                lr=learning_rate,
+                cliprange=clip_range,
+                policy=policy,
+                nenvs=nenvs,
+                ob_space=ob_space,
+                ac_space=ac_space,
+                nbatch=nbatch,
+                nbatch_train=nbatch_train,
+                model_fn=model_fn,
+                model=model,
+                num_trials=num_trials
+            )
     return
-# def model_avg_loss(env, model):
-
-# def chkpt_metric(path, model, env):
-#     model.load(path)
-#     loss = model_loss(env, model)
-#     eprewmean = model_eprewmean(env, model)
-#     return loss, eprewmean
-
-# def optimal_chkpt(path, model, env):
-#     best_loss = float("inf")
-#     best_chkpt = None
-#     for chkpt in os.listdir(path):
-#         model.load(path + chkpt)
-#         curr_loss, _ = chkpt_metric(path, model, env)
-#         if curr_loss < best_loss:
-#             best_loss = curr_loss
-#             best_chkpt = path + chkpt
-#     return best_chkpt
 
 def main():
     parser = argparse.ArgumentParser(description='Process procgen evaluation arguments.')
@@ -103,6 +155,7 @@ def main():
     parser.add_argument('--distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
     parser.add_argument('--num_levels', type=int, default=500)
     parser.add_argument('--start_level', type=int, default=500)
+    parser.add_argument('--num_trials', type=int, default=3)
 
     args = parser.parse_args()
 
@@ -115,6 +168,7 @@ def main():
         distribution_mode=args.distribution_mode,
         num_levels=args.num_levels,
         start_level=args.start_level,
+        num_trials=args.num_trials,
         comm=comm,
        )
 
