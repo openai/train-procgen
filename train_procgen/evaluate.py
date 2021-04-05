@@ -17,7 +17,7 @@ import os
 from baselines.common import set_global_seeds
 from baselines.common.policies import build_policy
 
-def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None, num_trials=3):
+def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None, num_trials=3):
 
     learning_rate = 5e-4
     ent_coef = .01
@@ -109,7 +109,8 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
             nbatch_train=nbatch_train,
             model_fn=model_fn,
             model=model,
-            num_trials=num_trials
+            num_trials=num_trials,
+            args=args
         )
     elif os.path.isdir(load_path):
         for file in os.listdir(load_path):
@@ -142,7 +143,8 @@ def eval_fn(load_path, env_name='fruitbot', num_envs=64, distribution_mode='easy
                 nbatch_train=nbatch_train,
                 model_fn=model_fn,
                 model=model,
-                num_trials=num_trials
+                num_trials=num_trials,
+                args=args
             )
     return
 
@@ -170,6 +172,7 @@ def main():
         start_level=args.start_level,
         num_trials=args.num_trials,
         comm=comm,
+        args=args,
        )
 
 if __name__ == '__main__':
