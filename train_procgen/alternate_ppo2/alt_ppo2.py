@@ -10,7 +10,7 @@ try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-from baselines.ppo2.runner import Runner
+from baselines.ppo2.runner import AugmentedRunner
 
 
 def constfn(val):
@@ -21,7 +21,7 @@ def constfn(val):
 def learn(*, network, env, total_timesteps, eval_env=None, seed=None, nsteps=2048, ent_coef=0.0, lr=3e-4,
             vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
             log_interval=10, nminibatches=4, noptepochs=4, cliprange=0.2,
-            save_interval=10, load_path=None, model_fn=None, update_fn=None, init_fn=None, mpi_rank_weight=1, comm=None, **network_kwargs):
+            save_interval=10, load_path=None, model_fn=None, update_fn=None, init_fn=None, mpi_rank_weight=1, comm=None, args=None, **network_kwargs):
     '''
     Learn policy using PPO algorithm (https://arxiv.org/abs/1707.06347)
 
@@ -111,9 +111,9 @@ def learn(*, network, env, total_timesteps, eval_env=None, seed=None, nsteps=204
     if load_path is not None:
         model.load(load_path)
     # Instantiate the runner object
-    runner = Runner(env=env, model=model, nsteps=nsteps, gamma=gamma, lam=lam)
+    runner = AugmentedRunner(env=env, model=model, nsteps=nsteps, gamma=gamma, lam=lam, args=args, is_train=mpi_rank_weight > 0)
     if eval_env is not None:
-        eval_runner = Runner(env = eval_env, model = model, nsteps = nsteps, gamma = gamma, lam= lam)
+        eval_runner = AugmentedRunner(env=eval_env, model=model, nsteps=nsteps, gamma=gamma, lam=lam, args=args, is_train=False)
 
     epinfobuf = deque(maxlen=100)
     if eval_env is not None:
@@ -219,12 +219,15 @@ def learn(*, network, env, total_timesteps, eval_env=None, seed=None, nsteps=204
 def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0,
             vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
             log_interval=10, nminibatches=4, noptepochs=4,
-            load_path=None, model_fn=None, update_fn=None, init_fn=None, mpi_rank_weight=1, comm=None, policy=None, nenvs=None, ob_space=None, ac_space=None, nbatch=None, nbatch_train=None, model=None, num_trials=3, **network_kwargs):
+            load_path=None, model_fn=None, update_fn=None, init_fn=None, 
+            mpi_rank_weight=1, comm=None, policy=None, nenvs=None, 
+            ob_space=None, ac_space=None, nbatch=None, nbatch_train=None, 
+            model=None, num_trials=3, args=None, **network_kwargs):
     for trial in range(num_trials):
         if load_path is not None:
             model.load(load_path)
         # Instantiate the runner object
-        eval_runner = Runner(env=eval_env, model=model, nsteps=nsteps, gamma=gamma, lam=lam)
+        eval_runner = AugmentedRunner(env=eval_env, model=model, nsteps=nsteps, gamma=gamma, lam=lam, args=args, is_train=False)
 
         eval_epinfobuf = deque(maxlen=100)
 
