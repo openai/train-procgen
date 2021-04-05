@@ -14,7 +14,7 @@ from mpi4py import MPI
 import argparse
 from alternate_ppo2 import alt_ppo2
 
-def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False, do_eval=False, eval_num_env=None, eval_env_name=None, eval_num_levels=None, eval_start_level=None, eval_distribution_mode=None):
+def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, args, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False, do_eval=False, eval_num_env=None, eval_env_name=None, eval_num_levels=None, eval_start_level=None, eval_distribution_mode=None):
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -87,6 +87,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
             init_fn=None,
             vf_coef=0.5,
             max_grad_norm=0.5,
+            args=args
         )
     else:
         ppo2.learn(
@@ -111,6 +112,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
             init_fn=None,
             vf_coef=0.5,
             max_grad_norm=0.5,
+            args=args
         )
 
 def main():
@@ -151,6 +153,7 @@ def main():
             args.num_levels,
             args.start_level,
             args.timesteps_per_proc,
+            args,
             is_test_worker=is_test_worker,
             log_dir=args.log_dir,
             comm=comm,
