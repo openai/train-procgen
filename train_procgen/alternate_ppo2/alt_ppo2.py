@@ -11,7 +11,9 @@ try:
 except ImportError:
     MPI = None
 from baselines.ppo2.runner import AugmentedRunner
-
+from gym3 import types_np, ViewerWrapper
+from procgen import ProcgenGym3Env
+from tqdm import tqdm
 
 def constfn(val):
     def f(_):
@@ -222,14 +224,10 @@ def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0,
             load_path=None, model_fn=None, update_fn=None, init_fn=None, 
             mpi_rank_weight=1, comm=None, policy=None, nenvs=None, 
             ob_space=None, ac_space=None, nbatch=None, nbatch_train=None, 
-            model=None, num_trials=3, args=None, **network_kwargs):
+            model=None, num_trials=3, num_levels=500, gui=False, args=None, **network_kwargs):
     for trial in range(num_trials):
         if load_path is not None:
             model.load(load_path)
-        # Instantiate the runner object
-        eval_runner = AugmentedRunner(env=eval_env, model=model, nsteps=nsteps, gamma=gamma, lam=lam, args=args, is_train=False)
-
-        eval_epinfobuf = deque(maxlen=100)
 
         if init_fn is not None:
             init_fn()
@@ -239,18 +237,38 @@ def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0,
 
         logger.info('Stepping environment...')
 
-        # Get minibatch
-        eval_obs, eval_returns, eval_masks, eval_actions, eval_values, eval_neglogpacs, eval_states, eval_epinfos = eval_runner.run() #pylint: disable=E0632
+        avg_reward = 0
+        avg_steps = 0
+
+        for num_level in tqdm(range(num_levels)):
+            if gui:
+                env = ViewerWrapper(ProcgenGym3Env(num=1, env_name="fruitbot", num_levels=1, start_level=num_level, distribution_mode='easy', render_mode="rgb_array"), info_key='rgb')
+            else:
+                env = ProcgenGym3Env(num=1, env_name="fruitbot", num_levels=1, start_level=num_level, distribution_mode='easy')
+            _, obs, _ = env.observe()
+            step = 0
+            total_reward = 0
+            while True:
+                actions, _, _, _ = model.step(obs['rgb'])
+                env.act(actions)
+                rew, obs, first = env.observe()
+                total_reward += rew
+                if step > 0 and first:
+                    break
+                step += 1
+            avg_reward += total_reward
+            avg_steps += step
+            
+        avg_reward = avg_reward / num_levels
+        avg_steps = avg_steps / num_levels
 
         logger.info('Done.')
-
-        eval_epinfobuf.extend(eval_epinfos)
 
         # End timer
         tnow = time.perf_counter()
 
-        logger.logkv('eval_eprewmean', safemean([epinfo['r'] for epinfo in eval_epinfobuf]) )
-        logger.logkv('eval_eplenmean', safemean([epinfo['l'] for epinfo in eval_epinfobuf]) )
+        logger.logkv('eval_eprewmean', avg_reward)
+        logger.logkv('eval_eplenmean', avg_steps)
         logger.logkv('misc/time_elapsed', tnow - tfirststart)
 
         logger.dumpkvs()

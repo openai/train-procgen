@@ -17,7 +17,7 @@ import os
 from baselines.common import set_global_seeds
 from baselines.common.policies import build_policy
 
-def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None, num_trials=3):
+def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None, num_trials=3, gui=False):
 
     learning_rate = 5e-4
     ent_coef = .01
@@ -110,6 +110,7 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
             model_fn=model_fn,
             model=model,
             num_trials=num_trials,
+            gui=gui,
             args=args
         )
     elif os.path.isdir(load_path):
@@ -144,6 +145,7 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
                 model_fn=model_fn,
                 model=model,
                 num_trials=num_trials,
+                gui=gui,
                 args=args
             )
     return
@@ -158,6 +160,7 @@ def main():
     parser.add_argument('--num_levels', type=int, default=500)
     parser.add_argument('--start_level', type=int, default=500)
     parser.add_argument('--num_trials', type=int, default=3)
+    parser.add_argument('--gui', action='store_true')
 
     args = parser.parse_args()
 
@@ -172,7 +175,8 @@ def main():
         start_level=args.start_level,
         num_trials=args.num_trials,
         comm=comm,
-        args=args,
+        gui=args.gui,
+        args=args
        )
 
 if __name__ == '__main__':
