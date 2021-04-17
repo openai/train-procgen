@@ -15,7 +15,7 @@ from baselines_replay.ppo2.envs import VecProcgen
 from baselines_replay.ppo2.level_sampler import LevelSampler
 from baselines_replay.ppo2.storage import RolloutStorage
 from baselines_replay.common.vec_env import VecExtractDictObs, VecMonitor, VecNormalize
-from procgen.procgen import ProcgenEnv
+from procgen_replay.procgen import ProcgenEnv
 
 
 def constfn(val):
