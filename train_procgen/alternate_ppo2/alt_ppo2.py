@@ -218,20 +218,20 @@ def learn(*, network, env, total_timesteps, eval_env=None, seed=None, nsteps=204
 
     return model
 
-def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0,
+def eval(*, network, seed=None, nsteps=2048, ent_coef=0.0,
             vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
             log_interval=10, nminibatches=4, noptepochs=4,
             load_path=None, model_fn=None, update_fn=None, init_fn=None, 
             mpi_rank_weight=1, comm=None, policy=None, nenvs=None, 
             ob_space=None, ac_space=None, nbatch=None, nbatch_train=None, 
-            model=None, num_trials=3, num_levels=500, gui=False, args=None, **network_kwargs):
+            model=None, num_trials=3, num_levels=500, start_level=0, gui=False, args=None, **network_kwargs):
+    if load_path is not None:
+        model.load(load_path)
+
+    if init_fn is not None:
+        init_fn()
+
     for trial in range(num_trials):
-        if load_path is not None:
-            model.load(load_path)
-
-        if init_fn is not None:
-            init_fn()
-
         # Start total timer
         tfirststart = time.perf_counter()
 
@@ -240,7 +240,7 @@ def eval(*, network, eval_env, seed=None, nsteps=2048, ent_coef=0.0,
         avg_reward = 0
         avg_steps = 0
 
-        for num_level in tqdm(range(num_levels)):
+        for num_level in tqdm(range(start_level, start_level+num_levels)):
             if gui:
                 env = ViewerWrapper(ProcgenGym3Env(num=1, env_name="fruitbot", num_levels=1, start_level=num_level, distribution_mode='easy', render_mode="rgb_array"), info_key='rgb')
             else:

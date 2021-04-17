@@ -85,7 +85,6 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
     if os.path.isfile(load_path):
         alt_ppo2.eval(
             network=conv_fn,
-            eval_env=venv,
             nsteps=nsteps,
             ent_coef=ent_coef,
             vf_coef=vf_coef,
@@ -110,6 +109,8 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
             model_fn=model_fn,
             model=model,
             num_trials=num_trials,
+            num_levels=num_levels,
+            start_level=start_level,
             gui=gui,
             args=args
         )
@@ -120,7 +121,6 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
             logger.configure(comm=log_comm, dir=log_dir+'/'+file, format_strs=format_strs)
             alt_ppo2.eval(
                 network=conv_fn,
-                eval_env=venv,
                 nsteps=nsteps,
                 ent_coef=ent_coef,
                 vf_coef=vf_coef,
@@ -145,6 +145,8 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
                 model_fn=model_fn,
                 model=model,
                 num_trials=num_trials,
+                num_levels=num_levels,
+                start_level=start_level,
                 gui=gui,
                 args=args
             )
