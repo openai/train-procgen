@@ -3,11 +3,11 @@ import tensorflow as tf
 import numpy as np
 from functools import partial
 
-from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
-from baselines.common.tf_util import make_session
-from baselines.ppo2.ppo2 import learn
+from baselines_replay.common.vec_env.dummy_vec_env import DummyVecEnv
+from baselines_replay.common.tf_util import make_session
+from baselines_replay.ppo2.ppo2 import learn
 
-from baselines.ppo2.microbatched_model import MicrobatchedModel
+from baselines_replay.ppo2.microbatched_model import MicrobatchedModel
 
 def test_microbatches():
     def env_fn():

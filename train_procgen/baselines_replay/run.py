@@ -7,11 +7,11 @@ from collections import defaultdict
 import tensorflow as tf
 import numpy as np
 
-from baselines.common.vec_env import VecFrameStack, VecNormalize, VecEnv
-from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
-from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env, make_env
-from baselines.common.tf_util import get_session
-from baselines import logger
+from baselines_replay.common.vec_env import VecFrameStack, VecNormalize, VecEnv
+from baselines_replay.common.vec_env.vec_video_recorder import VecVideoRecorder
+from baselines_replay.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env, make_env
+from baselines_replay.common.tf_util import get_session
+from baselines_replay import logger
 from importlib import import_module
 
 try:

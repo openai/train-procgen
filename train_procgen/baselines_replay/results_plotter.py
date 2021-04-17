@@ -5,7 +5,7 @@ matplotlib.use('TkAgg') # Can change to 'Agg' for non-interactive mode
 import matplotlib.pyplot as plt
 plt.rcParams['svg.fonttype'] = 'none'
 
-from baselines.common import plot_util
+from baselines_replay.common import plot_util
 
 X_TIMESTEPS = 'timesteps'
 X_EPISODES = 'episodes'

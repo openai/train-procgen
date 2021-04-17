@@ -1,5 +1,5 @@
 from gym.spaces.box import Box
-from baselines.common.vec_env import VecEnvWrapper
+from baselines_replay.common.vec_env import VecEnvWrapper
 import numpy as np
 
 class VecProcgen(VecEnvWrapper):

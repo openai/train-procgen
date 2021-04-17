@@ -1,29 +1,18 @@
 import tensorflow as tf
-from baselines.ppo2 import ppo2
-from baselines.common.models import build_impala_cnn
-from baselines.common.mpi_util import setup_mpi_gpus
-from procgen.procgen import ProcgenEnv
-from baselines.common.vec_env import (
+from baselines_replay.ppo2 import ppo2
+from baselines_replay.common.models import build_impala_cnn
+from baselines_replay.common.mpi_util import setup_mpi_gpus
+from procgen_replay.procgen import ProcgenEnv
+from baselines_replay.common.vec_env import (
     VecExtractDictObs,
     VecMonitor,
     VecFrameStack,
     VecNormalize
 )
-from baselines import logger
+from baselines_replay import logger
 from mpi4py import MPI
 import argparse
-from baselines.a2c.utils import conv, fc, conv_to_fc
 import numpy as np
-
-def cnn_small(X, **conv_kwargs):
-    h = tf.cast(X, tf.float32) / 255.
-
-    activ = tf.nn.relu
-    h = activ(conv(h, 'c1', nf=16, rf=8, stride=4, init_scale=np.sqrt(2), **conv_kwargs))
-    h = activ(conv(h, 'c2', nf=32, rf=4, stride=2, init_scale=np.sqrt(2), **conv_kwargs))
-    h = conv_to_fc(h)
-    h = activ(fc(h, 'fc1', nh=256, init_scale=np.sqrt(2)))
-    return h
 
 def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, model_name, is_test_worker=False, save_dir='./', comm=None):
     learning_rate = 5e-4
