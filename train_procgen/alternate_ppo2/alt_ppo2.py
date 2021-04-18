@@ -10,7 +10,7 @@ try:
     from mpi4py import MPI
 except ImportError:
     MPI = None
-from baselines.ppo2.runner import AugmentedRunner
+from .runner import AugmentedRunner
 from gym3 import types_np, ViewerWrapper
 from procgen import ProcgenGym3Env
 from tqdm import tqdm

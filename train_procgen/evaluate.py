@@ -17,7 +17,7 @@ import os
 from baselines.common import set_global_seeds
 from baselines.common.policies import build_policy
 
-def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None, num_trials=3, gui=False):
+def eval_fn(load_path, args, env_name='fruitbot', distribution_mode='easy', num_levels=500, start_level=500, log_dir='./tmp/procgen', comm=None, num_trials=3, gui=False):
 
     learning_rate = 5e-4
     ent_coef = .01
@@ -40,7 +40,7 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
     logger.configure(comm=log_comm, dir=log_dir, format_strs=format_strs)
 
     logger.info("creating environment")
-    venv = ProcgenEnv(num_envs=num_envs, env_name=env_name, num_levels=num_levels, start_level=start_level, distribution_mode=distribution_mode)
+    venv = ProcgenEnv(num_envs=1, env_name=env_name, num_levels=num_levels, start_level=start_level, distribution_mode=distribution_mode)
     venv = VecExtractDictObs(venv, "rgb")
 
     venv = VecMonitor(
@@ -150,6 +150,8 @@ def eval_fn(load_path, args, env_name='fruitbot', num_envs=64, distribution_mode
                 gui=gui,
                 args=args
             )
+    else:
+        print('Model path does not exist.')
     return
 
 def main():
@@ -157,7 +159,6 @@ def main():
     parser.add_argument('--load_model', type=str, required=True)
     parser.add_argument('--log_dir', type=str, default='./logs/eval')
     parser.add_argument('--env_name', type=str, default='fruitbot')
-    parser.add_argument('--num_envs', type=int, default=64)
     parser.add_argument('--distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
     parser.add_argument('--num_levels', type=int, default=500)
     parser.add_argument('--start_level', type=int, default=500)
@@ -171,7 +172,6 @@ def main():
     eval_fn(args.load_model,
         log_dir=args.log_dir,
         env_name=args.env_name,
-        num_envs=args.num_envs,
         distribution_mode=args.distribution_mode,
         num_levels=args.num_levels,
         start_level=args.start_level,
