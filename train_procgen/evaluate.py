@@ -12,7 +12,7 @@ from baselines.common.vec_env import (
 from baselines import logger
 from mpi4py import MPI
 import argparse
-from alternate_ppo2 import alt_ppo2
+from .alternate_ppo2 import alt_ppo2
 import os
 from baselines.common import set_global_seeds
 from baselines.common.policies import build_policy
@@ -75,7 +75,7 @@ def eval_fn(load_path, args, env_name='fruitbot', distribution_mode='easy', num_
     nbatch_train = nbatch // nminibatches
 
     # Instantiate the model object (that creates act_model and train_model)
-    from alternate_ppo2.model import Model
+    from .alternate_ppo2.model import Model
     model_fn = Model
 
     model = model_fn(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=nenvs, nbatch_train=nbatch_train,

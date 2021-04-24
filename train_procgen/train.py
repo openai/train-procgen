@@ -12,9 +12,9 @@ from baselines.common.vec_env import (
 from baselines import logger
 from mpi4py import MPI
 import argparse
-from alternate_ppo2 import alt_ppo2
+from .alternate_ppo2 import alt_ppo2
 
-def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, args, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False, do_eval=False, eval_num_env=None, eval_env_name=None, eval_num_levels=None, eval_start_level=None, eval_distribution_mode=None):
+def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, args, is_test_worker=False, log_dir='./tmp/procgen', comm=None, alternate_ppo=False, do_eval=False, eval_num_envs=None, eval_env_name=None, eval_num_levels=None, eval_start_level=None, eval_distribution_mode=None, do_test=False, test_num_envs=None, test_env_name=None, test_num_levels=None, test_start_level=None, test_distribution_mode=None):
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -54,6 +54,17 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
 
         eval_env = VecNormalize(venv=eval_env, ob=False)
 
+    test_env = None
+    if do_test:
+        test_env = ProcgenEnv(num_envs=test_num_envs, env_name=test_env_name, num_levels=test_num_levels, start_level=test_start_level, distribution_mode=test_distribution_mode)
+        test_env = VecExtractDictObs(test_env, "rgb")
+
+        test_env = VecMonitor(
+            venv=test_env, filename=None, keep_buf=100,
+        )
+
+        test_env = VecNormalize(venv=test_env, ob=False)
+
     logger.info("creating tf session")
     setup_mpi_gpus()
     config = tf.ConfigProto()
@@ -68,6 +79,7 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
         alt_ppo2.learn(
             env=venv,
             eval_env=eval_env,
+            test_env=test_env,
             network=conv_fn,
             total_timesteps=timesteps_per_proc,
             save_interval=1,
@@ -122,7 +134,7 @@ def main():
     parser.add_argument('--num_envs', type=int, default=64)
     parser.add_argument('--distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
     parser.add_argument('--num_levels', type=int, default=500)
-    parser.add_argument('--start_level', type=int, default=500)
+    parser.add_argument('--start_level', type=int, default=1000)
     parser.add_argument('--test_worker_interval', type=int, default=0)
     parser.add_argument('--timesteps_per_proc', type=int, default=50_000_000)
     parser.add_argument('--alternate_ppo', action='store_true')
@@ -135,8 +147,31 @@ def main():
     parser.add_argument('--eval_start_level', type=int, default=500)
     parser.add_argument('--eval_distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
 
+    # For evaluation (test set)
+    parser.add_argument('--do_test', action='store_true')
+    parser.add_argument('--test_num_envs', type=int, default=64)
+    parser.add_argument('--test_env_name', type=str, default='fruitbot')
+    parser.add_argument('--test_num_levels', type=int, default=500)
+    parser.add_argument('--test_start_level', type=int, default=0)
+    parser.add_argument('--test_distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
+
+    # For data augmentation
+    parser.add_argument('--do_aug', action='store_true')
+    parser.add_argument('--save_image', action='store_true')
+    # Autoaugment
+    parser.add_argument('--autoaugment', action='store_true')
+    # 0:ImageNetPolicy 1:CIFAR10Policy 2:SVHNPolicy
+    parser.add_argument('--autoaug_policy_idx', type=int, default=0, choices=[0, 1, 2])
+    # Augmix
+    parser.add_argument('--augmix', action='store_true')
+    parser.add_argument('--mixture_width', default=3, type=int, help='Number of augmentation chains to mix per augmented example')
+    parser.add_argument('--mixture_depth', default=-1, type=int, help='Depth of augmentation chains. -1 denotes stochastic depth in [1, 3]')
+    parser.add_argument('--aug_severity', default=1, type=int, help='Severity of base augmentation operators')
+    parser.add_argument('--aug_prob_coeff', default=1., type=float, help='Probability distribution coefficients')
 
     args = parser.parse_args()
+
+    args.do_aug = args.augmix or args.autoaugment
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
@@ -159,11 +194,17 @@ def main():
             comm=comm,
             alternate_ppo=args.alternate_ppo,
             do_eval=args.do_eval,
-            eval_num_env=args.eval_num_env,
+            eval_num_envs=args.eval_num_envs,
             eval_env_name=args.eval_env_name,
             eval_num_levels=args.eval_num_levels,
             eval_start_level=args.eval_start_level,
-            eval_distribution_mode=args.eval_distribution_mode
+            eval_distribution_mode=args.eval_distribution_mode,
+            do_test=args.do_test,
+            test_num_envs=args.test_num_envs,
+            test_env_name=args.test_env_name,
+            test_num_levels=args.test_num_levels,
+            test_start_level=args.test_start_level,
+            test_distribution_mode=args.eval_distribution_mode
             )
 
 if __name__ == '__main__':

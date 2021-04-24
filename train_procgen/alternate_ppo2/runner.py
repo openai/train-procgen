@@ -1,5 +1,8 @@
 import numpy as np
+import tensorflow as tf
+from PIL import Image
 from baselines.common.runners import AbstractEnvRunner
+from .augmentations import autoaugment, augment_and_mix
 
 class Runner(AbstractEnvRunner):
     """
@@ -80,8 +83,23 @@ class AugmentedRunner(Runner):
         self.args = args
         self.is_train = is_train
         self.obs = self.augment(self.obs)
-    
+
     def augment(self, obs):
+        if self.args.do_aug and self.is_train:
+            if self.args.autoaugment:
+                for i in range(obs.shape[0]):
+                    if self.args.save_image:
+                        Image.fromarray(obs[i]).convert('RGB').save('before_autoaug.png')
+                    obs[i] = np.array(autoaugment.autoaug_policies[self.args.autoaug_policy_idx](Image.fromarray(obs[i]).convert('RGB')))
+                    if self.args.save_image:
+                        Image.fromarray(obs[i]).convert('RGB').save('after_autoaug.png')
+            if self.args.augmix:
+                for i in range(obs.shape[0]):
+                    if self.args.save_image:
+                        Image.fromarray(obs[i]).convert('RGB').save('before_augmix.png')
+                    obs[i] = augment_and_mix.aug(Image.fromarray(obs[i]).convert('RGB'), lambda x: np.array(x, dtype='float32'), self.args)
+                    if self.args.save_image:
+                        Image.fromarray(obs[i]).convert('RGB').save('after_augmix.png')
         return obs
 
     def run(self):
@@ -109,10 +127,7 @@ class AugmentedRunner(Runner):
                 if maybeepinfo: epinfos.append(maybeepinfo)
             mb_rewards.append(rewards)
 
-            if self.data_aug != 'no_aug' and self.is_train:
-                self.obs[:] = self.aug_func.do_augmentation(obs)
-            else:
-                self.obs[:] = obs
+            self.obs[:] = self.augment(obs)
 
         #batch of steps to batch of rollouts
         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype)
@@ -138,9 +153,7 @@ class AugmentedRunner(Runner):
             mb_advs[t] = lastgaelam = delta + self.gamma * self.lam * nextnonterminal * lastgaelam
         mb_returns = mb_advs + mb_values
 
-        if self.is_train:
-            self.obs = self.augment(obs)
+        self.obs = self.augment(obs)
 
         return (*map(sf01, (mb_obs, mb_returns, mb_dones, mb_actions, mb_values, mb_neglogpacs)),
             mb_states, epinfos)
-
