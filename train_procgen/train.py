@@ -1,5 +1,8 @@
+from re import L
+from urllib.parse import parse_qs
 import tensorflow as tf
-from baselines.ppo2 import ppo2
+from train_procgen.tma_ppo2 import ppo2
+from train_procgen.teachers.teacher_controller import TeacherController
 from baselines.common.models import build_impala_cnn
 from baselines.common.mpi_util import setup_mpi_gpus
 from procgen import ProcgenEnv
@@ -13,7 +16,9 @@ from baselines import logger
 from mpi4py import MPI
 import argparse
 
-def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, is_test_worker=False, log_dir='/tmp/procgen', comm=None):
+from train_procgen.run_utils.environment_args_handler import EnvironmentArgsHandler
+
+def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, timesteps_per_proc, teacher, is_test_worker=False, log_dir='/tmp/procgen', comm=None):
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -34,6 +39,8 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
 
     logger.info("creating environment")
     venv = ProcgenEnv(num_envs=num_envs, env_name=env_name, num_levels=num_levels, start_level=start_level, distribution_mode=distribution_mode)
+    # venv.env.set_environment([[1,2,3]])
+    
     venv = VecExtractDictObs(venv, "rgb")
 
     venv = VecMonitor(
@@ -73,19 +80,26 @@ def train_fn(env_name, num_envs, distribution_mode, num_levels, start_level, tim
         init_fn=None,
         vf_coef=0.5,
         max_grad_norm=0.5,
+        Teacher=teacher,
     )
 
 def main():
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
     parser.add_argument('--env_name', type=str, default='coinrun')
-    parser.add_argument('--num_envs', type=int, default=64)
+    parser.add_argument('--num_envs', type=int, default=1)
     parser.add_argument('--distribution_mode', type=str, default='hard', choices=["easy", "hard", "exploration", "memory", "extreme"])
     parser.add_argument('--num_levels', type=int, default=0)
     parser.add_argument('--start_level', type=int, default=0)
     parser.add_argument('--test_worker_interval', type=int, default=0)
     parser.add_argument('--timesteps_per_proc', type=int, default=50_000_000)
+    parser.add_argument('--nb_test_episodes', type=int, default=42)
+    parser.add_argument('--seed', type=int, default=0)
+
+    EnvironmentArgsHandler.set_parser_arguments(parser)
+
 
     args = parser.parse_args()
+    args.env = args.env_name
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
@@ -96,12 +110,25 @@ def main():
     if test_worker_interval > 0:
         is_test_worker = rank % test_worker_interval == (test_worker_interval - 1)
 
+    params = {}
+        # Reward bounds are necessary if you want a normalized reward for your teachers (not used as default).
+    params["env_reward_lb"] = 0
+    params["env_reward_ub"] = 100
+        
+    env, param_env_bounds, initial_dist, target_dist = EnvironmentArgsHandler.get_object_from_arguments(args)
+
+
+    teacher = TeacherController('Random', args.nb_test_episodes, param_env_bounds, test_set=None,
+                                    seed=args.seed, keep_periodical_task_samples=None,
+                                    shuffle_dimensions=False, scale_reward=False, **params)
+
     train_fn(args.env_name,
         args.num_envs,
         args.distribution_mode,
         args.num_levels,
         args.start_level,
         args.timesteps_per_proc,
+        teacher,
         is_test_worker=is_test_worker,
         comm=comm)
 
