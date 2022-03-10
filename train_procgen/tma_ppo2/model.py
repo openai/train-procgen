@@ -1,13 +1,13 @@
 import tensorflow as tf
 import functools
 
-from TeachMyAgent.students.openai_baselines.common.tf_util import get_session, save_variables, load_variables
-from TeachMyAgent.students.openai_baselines.common.tf_util import initialize
+from baselines.common.tf_util import get_session, save_variables, load_variables
+from baselines.common.tf_util import initialize
 
 try:
-    from TeachMyAgent.students.openai_baselines.common.mpi_adam_optimizer import MpiAdamOptimizer
+    from baselines.common.mpi_adam_optimizer import MpiAdamOptimizer
     from mpi4py import MPI
-    from TeachMyAgent.students.openai_baselines.common.mpi_util import sync_from_root
+    from baselines.common.mpi_util import sync_from_root
 except ImportError:
     MPI = None
 

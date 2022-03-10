@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from TeachMyAgent.students.openai_baselines.ppo2.model import Model
+from baselines.ppo2.model import Model
 
 class MicrobatchedModel(Model):
     """
